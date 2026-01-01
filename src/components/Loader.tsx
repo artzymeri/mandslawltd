@@ -1,11 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-
-// GPU-optimized transition
-const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 
 interface LoaderProps {
   onComplete: () => void;
@@ -13,117 +10,24 @@ interface LoaderProps {
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
   const [showLogo, setShowLogo] = useState(false);
-  const [showText, setShowText] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showTagline, setShowTagline] = useState(false);
 
-  // Check for mobile
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-  }, []);
+    // Classic reveal sequence
+    setTimeout(() => setShowLogo(true), 400);
+    setTimeout(() => setShowTagline(true), 1000);
 
-  // Canvas animation for golden particles - optimized
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    // Fewer particles on mobile
-    const particleCount = isMobile ? 30 : 60;
-    const particlesArray: {
-      x: number;
-      y: number;
-      size: number;
-      speedX: number;
-      speedY: number;
-      opacity: number;
-    }[] = [];
-
-    for (let i = 0; i < particleCount; i++) {
-      particlesArray.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2 + 0.5,
-        speedX: (Math.random() - 0.5) * 0.3,
-        speedY: (Math.random() - 0.5) * 0.3,
-        opacity: Math.random() * 0.4 + 0.1,
-      });
-    }
-
-    let animationId: number;
-    let lastFrameTime = 0;
-    const targetFPS = isMobile ? 30 : 60;
-    const frameInterval = 1000 / targetFPS;
-
-    const animate = (currentTime: number) => {
-      animationId = requestAnimationFrame(animate);
-      
-      if (currentTime - lastFrameTime < frameInterval) return;
-      lastFrameTime = currentTime;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particlesArray.forEach((particle) => {
-        particle.x += particle.speedX;
-        particle.y += particle.speedY;
-
-        if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
-        if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
-
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(194, 159, 97, ${particle.opacity})`;
-        ctx.fill();
-      });
-
-      // Skip connecting lines on mobile
-      if (!isMobile) {
-        particlesArray.forEach((p1, i) => {
-          particlesArray.slice(i + 1).forEach((p2) => {
-            const distance = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
-            if (distance < 80) {
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.strokeStyle = `rgba(194, 159, 97, ${0.08 * (1 - distance / 80)})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          });
-        });
-      }
-    };
-
-    animationId = requestAnimationFrame(animate);
-
-    return () => cancelAnimationFrame(animationId);
-  }, [isMobile]);
-
-  // Loading sequence
-  useEffect(() => {
-    setTimeout(() => setShowLogo(true), 300);
-    setTimeout(() => setShowText(true), 800);
+    let assetsLoaded = false;
 
     const assets = ["/video1.mp4", "/video2.mp4"];
     let loadedCount = 0;
 
     const updateProgress = () => {
       loadedCount++;
-      const newProgress = Math.round((loadedCount / assets.length) * 100);
-      setProgress(newProgress);
-
       if (loadedCount === assets.length) {
-        setTimeout(() => {
-          setIsLoading(false);
-          setTimeout(onComplete, 600);
-        }, 800);
+        assetsLoaded = true;
       }
     };
 
@@ -136,21 +40,31 @@ export default function Loader({ onComplete }: LoaderProps) {
       video.load();
     });
 
+    // Smooth animated progress - controls the visual display
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
-      if (currentProgress < 90) {
-        currentProgress += Math.random() * 10;
-        setProgress(Math.min(Math.round(currentProgress), 90));
+      if (currentProgress < 100) {
+        // Speed up when assets are loaded
+        const increment = assetsLoaded ? 8 : 4;
+        currentProgress += Math.random() * increment + 1;
+        currentProgress = Math.min(currentProgress, assetsLoaded ? 100 : 85);
+        setDisplayProgress(Math.round(currentProgress));
       }
-    }, 250);
+      
+      // Complete when we reach 100%
+      if (currentProgress >= 100) {
+        clearInterval(progressInterval);
+        setTimeout(() => {
+          setIsLoading(false);
+          setTimeout(onComplete, 800);
+        }, 1000);
+      }
+    }, 150);
 
+    // Fallback timeout
     const fallbackTimer = setTimeout(() => {
-      setProgress(100);
-      setTimeout(() => {
-        setIsLoading(false);
-        setTimeout(onComplete, 600);
-      }, 400);
-    }, 3500);
+      assetsLoaded = true;
+    }, 4000);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -164,80 +78,86 @@ export default function Loader({ onComplete }: LoaderProps) {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ...gpuTransition }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0a0a0a] overflow-hidden"
-          style={{ willChange: "opacity" }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#f8f6f3]"
         >
-          {/* Canvas for particle effects */}
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 opacity-40"
-          />
-
-          {/* Static gradient orb - no animation for performance */}
-          <div
-            className="absolute w-[400px] h-[400px] rounded-full opacity-20"
+          {/* Classic elegant background */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,#f8f6f3_0%,#efe9e1_100%)]" />
+          
+          {/* Subtle texture overlay */}
+          <div 
+            className="absolute inset-0 opacity-[0.03]"
             style={{
-              background: "radial-gradient(circle, rgba(194, 159, 97, 0.4) 0%, transparent 70%)",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
             }}
           />
 
+          {/* Decorative corner lines */}
+          <div className="absolute top-12 left-12 w-24 h-24">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-[#1a1a1a]/10" />
+            <div className="absolute top-0 left-0 w-[1px] h-full bg-[#1a1a1a]/10" />
+          </div>
+          <div className="absolute bottom-12 right-12 w-24 h-24">
+            <div className="absolute bottom-0 right-0 w-full h-[1px] bg-[#1a1a1a]/10" />
+            <div className="absolute bottom-0 right-0 w-[1px] h-full bg-[#1a1a1a]/10" />
+          </div>
+
           {/* Central content */}
           <div className="relative z-10 flex flex-col items-center">
-            {/* Logo reveal */}
+            {/* Logo */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={showLogo ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, ...gpuTransition }}
-              className="mb-8 relative"
-              style={{ willChange: "transform, opacity" }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="mb-10"
             >
               <Image
                 src="/logo.png"
                 alt="M&S Law Ltd"
-                width={200}
-                height={80}
-                className="h-20 w-auto relative z-10 brightness-0 invert"
+                width={180}
+                height={72}
+                className="h-16 w-auto"
                 priority
               />
             </motion.div>
 
             {/* Tagline */}
-            <motion.div
+            <motion.p
               initial={{ opacity: 0 }}
-              animate={showText ? { opacity: 1 } : {}}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="mb-12"
+              animate={showTagline ? { opacity: 1 } : {}}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="text-[#1a1a1a]/40 text-sm tracking-[0.25em] uppercase font-light mb-14 font-serif"
             >
-              <p className="text-white/40 text-sm tracking-[0.3em] uppercase font-light">
-                Excellence in Law
-              </p>
-            </motion.div>
+              Solicitors
+            </motion.p>
 
-            {/* Progress bar */}
-            <div className="relative w-64">
-              <div className="h-[2px] bg-white/10 rounded-full overflow-hidden">
+            {/* Classic progress bar */}
+            <div className="w-48">
+              <div className="h-[1px] bg-[#1a1a1a]/10 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ ease: "easeOut", duration: 0.2 }}
-                  className="h-full bg-gradient-to-r from-amber-600 to-amber-500"
-                  style={{ willChange: "width" }}
+                  animate={{ width: `${displayProgress}%` }}
+                  transition={{ ease: "easeOut", duration: 0.3 }}
+                  className="h-full bg-[#1a1a1a]/40"
                 />
               </div>
+              
+              {/* Progress percentage */}
+              <p className="text-center mt-6 text-[11px] tracking-[0.2em] text-[#1a1a1a]/30 font-light">
+                {displayProgress}%
+              </p>
             </div>
-
-            {/* Progress text */}
-            <motion.span
-              className="mt-6 text-[11px] tracking-[0.15em] text-white/30 font-mono"
-            >
-              {progress.toString().padStart(3, "0")}%
-            </motion.span>
           </div>
 
-          {/* Corner decorations - static */}
-          <div className="absolute top-8 left-8 w-16 h-16 border-l border-t border-white/10" />
-          <div className="absolute bottom-8 right-8 w-16 h-16 border-r border-b border-white/10" />
+          {/* Bottom text */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5, duration: 0.8 }}
+            className="absolute bottom-12 text-[10px] tracking-[0.15em] text-[#1a1a1a]/25 uppercase"
+          >
+            Excellence in Law
+          </motion.p>
         </motion.div>
       )}
     </AnimatePresence>

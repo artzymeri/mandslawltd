@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight, Scale, Home, Heart, FileText } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
@@ -15,7 +15,6 @@ const services = [
     description: "Protect your legacy with professionally prepared wills and trusts that ensure your wishes are honoured.",
     href: "/wills-and-trusts",
     image: "/our-expertise/wills-and-trusts.jpg",
-    icon: FileText,
     accent: "from-amber-500/20 to-amber-700/20",
   },
   {
@@ -23,7 +22,6 @@ const services = [
     description: "Expert guidance for workplace injury and illness claims. We help you get the compensation you deserve.",
     href: "/work-related-illness",
     image: "/our-expertise/work-illness.jpg",
-    icon: Heart,
     accent: "from-rose-500/20 to-rose-700/20",
   },
   {
@@ -31,7 +29,6 @@ const services = [
     description: "Living in poor conditions? We ensure your landlord fulfils their legal obligations to you.",
     href: "/housing-disrepair",
     image: "/our-expertise/house-disrepair.jpg",
-    icon: Home,
     accent: "from-blue-500/20 to-blue-700/20",
   },
   {
@@ -39,7 +36,6 @@ const services = [
     description: "From road accidents to workplace incidents, we handle all personal injury claims with care.",
     href: "/personal-injury",
     image: "/our-expertise/personal-injury.jpg",
-    icon: Scale,
     accent: "from-emerald-500/20 to-emerald-700/20",
   },
 ];
@@ -154,15 +150,7 @@ export default function Services() {
                     }}
                   />
 
-                  {/* Icon */}
-                  <motion.div
-                    className="absolute top-8 right-8 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/10"
-                    whileHover={{ rotate: 10 }}
-                  >
-                    <service.icon className="w-6 h-6 text-white/70" />
-                  </motion.div>
-
-                  {/* Content */}
+                  {/* Animated border glow */}
                   <div className="absolute bottom-0 left-0 right-0 p-8 md:p-10">
                     {/* Number indicator */}
                     <motion.span
