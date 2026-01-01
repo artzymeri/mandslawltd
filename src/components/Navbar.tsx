@@ -151,53 +151,67 @@ export default function Navbar() {
             </button>
           </motion.div>
         </motion.nav>
+      </motion.header>
 
-        {/* Mobile Menu - Full Screen */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="lg:hidden fixed inset-0 bg-[#0a0a0a] z-40"
-              style={{ willChange: "opacity" }}
+      {/* Mobile Menu - Full Screen Glass - Outside header for proper stacking */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="lg:hidden fixed inset-0 z-[9999]"
+            style={{ willChange: "opacity" }}
+          >
+            {/* Solid background layer */}
+            <div className="absolute inset-0 bg-[#0a0a0a] z-0" />
+            
+            {/* Blur overlay for glass effect */}
+            <div className="absolute inset-0 backdrop-blur-3xl bg-black/40 z-[1]" />
+
+            {/* Close button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-6 right-6 p-3 text-white/80 hover:text-white transition-colors z-[50]"
             >
-              <div className="flex flex-col justify-center items-center h-full px-8">
-                {navLinks.map((link, index) => (
-                  <motion.div
-                    key={link.href}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + index * 0.05, duration: 0.5 }}
-                  >
-                    <Link
-                      href={link.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block py-4 text-white/80 hover:text-white transition-colors font-serif text-3xl text-center"
-                    >
-                      {link.label}
-                    </Link>
-                  </motion.div>
-                ))}
+              <X size={28} />
+            </button>
+
+            <div className="relative z-10 flex flex-col justify-center items-center h-full px-8">
+              {navLinks.map((link, index) => (
                 <motion.div
+                  key={link.href}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
-                  className="pt-8 mt-8 border-t border-white/10 w-full max-w-xs"
+                  transition={{ delay: 0.1 + index * 0.05, duration: 0.5 }}
                 >
-                  <a
-                    href="tel:01254404055"
-                    className="block text-center text-[15px] font-medium text-[#0a0a0a] bg-gradient-to-r from-amber-500 to-amber-600 py-4 rounded-full transition-all hover:shadow-[0_10px_30px_rgba(194,159,97,0.3)]"
+                  <Link
+                    href={link.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-4 text-white/80 hover:text-white transition-colors font-serif text-3xl text-center"
                   >
-                    01254 40 40 55
-                  </a>
+                    {link.label}
+                  </Link>
                 </motion.div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.header>
+              ))}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                className="pt-8 mt-8 border-t border-white/10 w-full max-w-xs"
+              >
+                <a
+                  href="tel:01254404055"
+                  className="block text-center text-[15px] font-medium text-[#0a0a0a] bg-gradient-to-r from-amber-500 to-amber-600 py-4 rounded-full transition-all hover:shadow-[0_10px_30px_rgba(194,159,97,0.3)]"
+                >
+                  01254 40 40 55
+                </a>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

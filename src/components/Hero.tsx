@@ -104,7 +104,8 @@ export default function Hero() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className={`inline-block overflow-hidden ${className}`}
+        className={`inline-block ${className}`}
+        style={{ overflow: "visible" }}
       >
         {text.split("").map((char, index) => (
           <motion.span
@@ -203,13 +204,13 @@ export default function Hero() {
         </div>
 
         <div className="mb-12 perspective-1000">
-          <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-medium tracking-tight leading-[0.9]" style={{ fontFamily: "var(--font-playfair), serif" }}>
+          <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-medium tracking-tight leading-[1.1]" style={{ fontFamily: "var(--font-playfair), serif" }}>
             <motion.span
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="inline-block overflow-hidden"
-              style={{ transitionDelay: "0.5s" }}
+              className="inline-block"
+              style={{ transitionDelay: "0.5s", overflow: "visible" }}
             >
               {subText.split("").map((char, index) => (
                 <motion.span
