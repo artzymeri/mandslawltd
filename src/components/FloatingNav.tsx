@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Home, Briefcase, Users, Phone } from "lucide-react";
+import { Home, Briefcase, Users, MessageSquareQuote, Phone } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "#services", label: "Services", icon: Briefcase },
   { href: "#about", label: "About", icon: Users },
+  { href: "#testimonials", label: "Testimonials", icon: MessageSquareQuote },
   { href: "#contact", label: "Contact", icon: Phone },
 ];
 
@@ -22,7 +23,7 @@ export default function FloatingNav() {
       setIsVisible(window.scrollY > window.innerHeight * 0.5);
 
       // Detect active section
-      const sections = ["contact", "about", "services"];
+      const sections = ["contact", "testimonials", "about", "services"];
       for (const section of sections) {
         const el = document.getElementById(section);
         if (el) {

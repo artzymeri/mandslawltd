@@ -184,7 +184,7 @@ export default function Testimonials() {
   const secondRow = testimonials.slice(4).concat(testimonials.slice(0, 3));
 
   return (
-    <section className="relative py-32 bg-[#050505] overflow-hidden">
+    <section id="testimonials" className="relative py-32 bg-[#050505] overflow-hidden">
       {/* Vignette overlay - left */}
       <div className="absolute left-0 top-0 bottom-0 w-32 md:w-64 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none" />
       
