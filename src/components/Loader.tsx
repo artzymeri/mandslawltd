@@ -7,19 +7,25 @@ interface LoaderProps {
   onComplete: () => void;
 }
 
+const words = ["Precision", "Integrity", "M&S Law"];
+
 export default function Loader({ onComplete }: LoaderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [displayProgress, setDisplayProgress] = useState(0);
-  const [showLogo, setShowLogo] = useState(false);
-  const [showTagline, setShowTagline] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [isRevealing, setIsRevealing] = useState(false);
 
   useEffect(() => {
-    // Classic reveal sequence
-    setTimeout(() => setShowLogo(true), 400);
-    setTimeout(() => setShowTagline(true), 1000);
+    // Word cycling effect
+    const wordInterval = setInterval(() => {
+      setCurrentWordIndex((prev) => {
+        if (prev < words.length - 1) return prev + 1;
+        clearInterval(wordInterval);
+        return prev;
+      });
+    }, 1200);
 
     let assetsLoaded = false;
-
     const assets = ["/video1.mp4", "/video2.mp4"];
     let loadedCount = 0;
 
@@ -39,13 +45,17 @@ export default function Loader({ onComplete }: LoaderProps) {
       video.load();
     });
 
-    // Smooth animated progress - controls the visual display
+    // Smooth animated progress - fast at first, slows down near 100%
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
       if (currentProgress < 100) {
-        // Speed up when assets are loaded
-        const increment = assetsLoaded ? 8 : 4;
-        currentProgress += Math.random() * increment + 1;
+        // Slow down as we approach 100%
+        const remaining = 100 - currentProgress;
+        const baseIncrement = assetsLoaded ? 8 : 3;
+        const slowdownFactor = Math.max(0.1, remaining / 100);
+        const increment = baseIncrement * slowdownFactor + Math.random() * 2;
+        
+        currentProgress += increment;
         currentProgress = Math.min(currentProgress, assetsLoaded ? 100 : 85);
         setDisplayProgress(Math.round(currentProgress));
       }
@@ -53,112 +63,128 @@ export default function Loader({ onComplete }: LoaderProps) {
       // Complete when we reach 100%
       if (currentProgress >= 100) {
         clearInterval(progressInterval);
+        // Start curtain reveal
         setTimeout(() => {
-          setIsLoading(false);
-          setTimeout(onComplete, 800);
-        }, 1000);
+          setIsRevealing(true);
+          // After curtain animation completes
+          setTimeout(() => {
+            setIsLoading(false);
+            onComplete();
+          }, 1200);
+        }, 500);
       }
-    }, 150);
+    }, 80);
 
     // Fallback timeout
     const fallbackTimer = setTimeout(() => {
       assetsLoaded = true;
-    }, 4000);
+    }, 5000);
 
     return () => {
       clearTimeout(fallbackTimer);
       clearInterval(progressInterval);
+      clearInterval(wordInterval);
     };
   }, [onComplete]);
+
+  // Premium heavy easing curve
+  const curtainEasing = [0.76, 0, 0.24, 1] as [number, number, number, number];
 
   return (
     <AnimatePresence mode="wait">
       {isLoading && (
         <motion.div
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#f8f6f3]"
+          initial={{ y: 0 }}
+          animate={{ y: isRevealing ? "-100%" : 0 }}
+          transition={{ 
+            duration: 1.2, 
+            ease: curtainEasing,
+          }}
+          className="fixed inset-0 z-50 bg-[#050505] overflow-hidden"
         >
-          {/* Classic elegant background */}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,#f8f6f3_0%,#efe9e1_100%)]" />
-          
-          {/* Subtle texture overlay */}
+          {/* Subtle grain texture */}
           <div 
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
             }}
           />
 
-          {/* Decorative corner lines */}
-          <div className="absolute top-12 left-12 w-24 h-24">
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-[#1a1a1a]/10" />
-            <div className="absolute top-0 left-0 w-[1px] h-full bg-[#1a1a1a]/10" />
+          {/* Decorative corner accents */}
+          <div className="absolute top-8 left-8 w-20 h-20">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-[#D4AF37]/30 to-transparent" />
+            <div className="absolute top-0 left-0 w-[1px] h-full bg-gradient-to-b from-[#D4AF37]/30 to-transparent" />
           </div>
-          <div className="absolute bottom-12 right-12 w-24 h-24">
-            <div className="absolute bottom-0 right-0 w-full h-[1px] bg-[#1a1a1a]/10" />
-            <div className="absolute bottom-0 right-0 w-[1px] h-full bg-[#1a1a1a]/10" />
+          <div className="absolute bottom-8 right-8 w-20 h-20">
+            <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-[#D4AF37]/30 to-transparent" />
+            <div className="absolute bottom-0 right-0 w-[1px] h-full bg-gradient-to-t from-[#D4AF37]/30 to-transparent" />
           </div>
 
-          {/* Central content */}
-          <div className="relative z-10 flex flex-col items-center">
-            {/* Logo - suppressHydrationWarning to handle browser extension interference */}
+          {/* Center - Word Cycle */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.h1
+                key={currentWordIndex}
+                initial={{ opacity: 0, filter: "blur(10px)" }}
+                animate={{ opacity: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, filter: "blur(10px)" }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight"
+                style={{ 
+                  fontFamily: "var(--font-playfair), serif",
+                  color: currentWordIndex === words.length - 1 ? "#D4AF37" : "white",
+                }}
+              >
+                {words[currentWordIndex]}
+              </motion.h1>
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom Right - Massive Counter */}
+          <div className="absolute bottom-8 right-8 md:bottom-12 md:right-12">
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={showLogo ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="mb-10"
-              suppressHydrationWarning
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="M&S Law Ltd"
-                width={180}
-                height={72}
-                className="h-16 w-auto"
-                suppressHydrationWarning
-              />
-            </motion.div>
-
-            {/* Tagline */}
-            <motion.p
               initial={{ opacity: 0 }}
-              animate={showTagline ? { opacity: 1 } : {}}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="text-[#1a1a1a]/40 text-sm tracking-[0.25em] uppercase font-light mb-14 font-serif"
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-right"
             >
-              Solicitors
-            </motion.p>
-
-            {/* Classic progress bar */}
-            <div className="w-48">
-              <div className="h-[1px] bg-[#1a1a1a]/10 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${displayProgress}%` }}
-                  transition={{ ease: "easeOut", duration: 0.3 }}
-                  className="h-full bg-[#1a1a1a]/40"
-                />
-              </div>
-              
-              {/* Progress percentage */}
-              <p className="text-center mt-6 text-[11px] tracking-[0.2em] text-[#1a1a1a]/30 font-light">
-                {displayProgress}%
+              <p 
+                className="text-[80px] md:text-[120px] lg:text-[180px] font-medium leading-none tracking-tighter"
+                style={{ 
+                  fontFamily: "var(--font-playfair), serif",
+                  fontVariantNumeric: "tabular-nums",
+                  color: "#D4AF37",
+                }}
+              >
+                {displayProgress}
               </p>
-            </div>
+              <p className="text-white/30 text-xs md:text-sm tracking-[0.3em] uppercase mt-2">
+                Loading
+              </p>
+            </motion.div>
           </div>
 
-          {/* Bottom text */}
-          <motion.p
+          {/* Bottom Left - Branding */}
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.5, duration: 0.8 }}
-            className="absolute bottom-12 text-[10px] tracking-[0.15em] text-[#1a1a1a]/25 uppercase"
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="absolute bottom-8 left-8 md:bottom-12 md:left-12"
           >
-            Excellence in Law
-          </motion.p>
+            <p className="text-white/20 text-[10px] tracking-[0.2em] uppercase">
+              Solicitors in Lancashire
+            </p>
+          </motion.div>
+
+          {/* Progress line at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${displayProgress}%` }}
+              transition={{ ease: "easeOut", duration: 0.1 }}
+              className="h-full bg-gradient-to-r from-[#D4AF37] to-[#D4AF37]/50"
+            />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
