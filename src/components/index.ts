@@ -6,3 +6,4 @@ export { default as Services } from './Services';
 export { default as Testimonials } from './Testimonials';
 export { default as Contact } from './Contact';
 export { default as Footer } from './Footer';
+export { default as Background3D } from './Background3D';

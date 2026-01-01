@@ -1,14 +1,45 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
+import { ArrowRight, ArrowDown } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export default function Hero() {
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [activeVideo, setActiveVideo] = useState<1 | 2>(1);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  // Parallax scroll
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  });
+
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  const y = useTransform(smoothProgress, [0, 1], ["0%", "30%"]);
+  const opacity = useTransform(smoothProgress, [0, 0.5], [1, 0]);
+  const scale = useTransform(smoothProgress, [0, 0.5], [1, 1.1]);
+  const textY = useTransform(smoothProgress, [0, 1], ["0%", "100%"]);
+
+  // Mouse parallax for content
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth - 0.5) * 20,
+        y: (e.clientY / window.innerHeight - 0.5) * 20,
+      });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   const handleVideo1End = () => {
     setActiveVideo(2);
@@ -20,10 +51,54 @@ export default function Hero() {
     video1Ref.current?.play();
   };
 
+  // Text animation variants
+  const titleVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const letterVariants = {
+    hidden: { opacity: 0, y: 80, rotateX: -90 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      rotateX: 0,
+      transition: {
+        duration: 0.8,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      },
+    },
+  };
+
+  const splitText = (text: string) => {
+    return text.split("").map((char, index) => (
+      <motion.span
+        key={index}
+        variants={letterVariants}
+        className="inline-block"
+        style={{ transformOrigin: "bottom" }}
+      >
+        {char === " " ? "\u00A0" : char}
+      </motion.span>
+    ));
+  };
+
   return (
-    <section className="relative h-screen flex items-center justify-center overflow-hidden">
-      {/* Video Background */}
-      <div className="absolute inset-0 z-0">
+    <section 
+      ref={containerRef}
+      className="relative h-screen flex items-center justify-center overflow-hidden"
+    >
+      {/* Video Background with Parallax */}
+      <motion.div 
+        className="absolute inset-0 z-0"
+        style={{ y, scale }}
+      >
         <video
           ref={video1Ref}
           src="/video1.mp4"
@@ -45,37 +120,90 @@ export default function Hero() {
             activeVideo === 2 ? "opacity-100" : "opacity-0"
           }`}
         />
-        {/* Minimal Dark Overlay */}
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+        {/* Premium gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
+      </motion.div>
 
-      {/* Content - Centered, Minimal */}
-      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      {/* Floating decorative elements */}
+      <motion.div
+        className="absolute top-20 left-10 w-32 h-32 border border-white/10 rounded-full"
+        animate={{
+          rotate: 360,
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+          scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+        }}
+        style={{ opacity }}
+      />
+      <motion.div
+        className="absolute bottom-40 right-20 w-20 h-20 border border-amber-500/20"
+        animate={{
+          rotate: -360,
+        }}
+        transition={{
+          duration: 15,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        style={{ opacity }}
+      />
+
+      {/* Content - Centered, Premium */}
+      <motion.div 
+        className="relative z-10 text-center px-6 max-w-5xl mx-auto"
+        style={{ 
+          y: textY,
+          opacity,
+          x: mousePosition.x * 0.5,
+        }}
+      >
+        {/* Decorative line */}
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="w-16 h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent mx-auto mb-8"
+        />
+
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="text-white/60 text-sm tracking-[0.2em] uppercase mb-6"
+          className="text-amber-200/60 text-sm tracking-[0.3em] uppercase mb-8 font-light"
         >
           Solicitors in Lancashire
         </motion.p>
 
         <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="text-5xl md:text-7xl lg:text-8xl font-semibold text-white tracking-tight leading-[1.1] mb-8"
+          variants={titleVariants}
+          initial="hidden"
+          animate="visible"
+          className="text-5xl md:text-7xl lg:text-8xl font-medium text-white tracking-tight leading-[1.1] mb-4 font-serif"
         >
-          Legal excellence,
-          <br />
-          <span className="text-white/80">simplified.</span>
+          <span className="block overflow-hidden">
+            {splitText("Legal excellence,")}
+          </span>
+        </motion.h1>
+
+        <motion.h1
+          variants={titleVariants}
+          initial="hidden"
+          animate="visible"
+          className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight leading-[1.1] mb-10 font-serif"
+        >
+          <span className="block overflow-hidden text-gradient">
+            {splitText("simplified.")}
+          </span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+          transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-light"
         >
           Decades of expertise in Wills & Trusts, Personal Injury, Housing, and more. 
           Based in Blackburn, serving all of Lancashire.
@@ -84,40 +212,58 @@ export default function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          transition={{ duration: 0.8, delay: 1, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-5"
         >
           <Link 
             href="/contact" 
-            className="group inline-flex items-center gap-2 bg-white text-[#1a1a1a] px-8 py-4 rounded-full font-medium text-[15px] transition-all hover:scale-105"
+            className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-10 py-5 rounded-full font-medium text-[15px] transition-all hover:shadow-[0_20px_50px_rgba(194,159,97,0.3)] overflow-hidden btn-premium"
           >
-            Get Started
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            <span className="relative z-10">Get Started</span>
+            <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />
           </Link>
           <a 
             href="tel:01254404055" 
-            className="inline-flex items-center gap-2 text-white/90 hover:text-white px-8 py-4 font-medium text-[15px] transition-colors"
+            className="group inline-flex items-center gap-3 text-white/80 hover:text-white px-10 py-5 font-medium text-[15px] transition-all border border-white/20 rounded-full hover:border-white/40 hover:bg-white/5"
           >
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             Call 01254 40 40 55
           </a>
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* Scroll Indicator */}
+      {/* Scroll Indicator - Premium */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10"
+        transition={{ delay: 2 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-3"
+        style={{ opacity }}
       >
+        <span className="text-white/40 text-xs tracking-[0.2em] uppercase">Scroll</span>
         <motion.div
-          animate={{ y: [0, 8, 0] }}
+          animate={{ y: [0, 10, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center pt-2"
         >
-          <div className="w-1 h-2 bg-white/60 rounded-full" />
+          <ArrowDown size={20} className="text-white/40" />
         </motion.div>
       </motion.div>
+
+      {/* Corner accents */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 1 }}
+        className="absolute top-8 left-8 w-24 h-24 border-l border-t border-white/10"
+        style={{ opacity }}
+      />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.6, duration: 1 }}
+        className="absolute bottom-8 right-8 w-24 h-24 border-r border-b border-white/10"
+        style={{ opacity }}
+      />
     </section>
   );
 }
