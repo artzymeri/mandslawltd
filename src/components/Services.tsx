@@ -1,10 +1,13 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowUpRight, Scale, Home, Heart, FileText } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+
+// GPU-optimized transition
+const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 
 const services = [
   {
@@ -44,24 +47,22 @@ const services = [
 export default function Services() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"]
-  });
-
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   return (
     <section ref={containerRef} className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
-      {/* Background effects */}
-      <motion.div 
-        className="absolute inset-0 opacity-30"
-        style={{ y: backgroundY }}
-      >
+      {/* Background effects - static for performance */}
+      <div className="absolute inset-0 opacity-30">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[150px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-amber-700/10 rounded-full blur-[120px]" />
-      </motion.div>
+      </div>
 
       {/* Grid pattern overlay */}
       <div 
@@ -129,11 +130,9 @@ export default function Services() {
               <Link href={service.href} className="block group">
                 <motion.div 
                   className="relative h-[400px] md:h-[500px] rounded-3xl overflow-hidden border border-white/5"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    transformStyle: "preserve-3d",
-                  }}
+                  whileHover={isMobile ? {} : { scale: 1.02 }}
+                  transition={{ duration: 0.3, ...gpuTransition }}
+                  style={{ willChange: isMobile ? "auto" : "transform" }}
                 >
                   {/* Background Image */}
                   <Image

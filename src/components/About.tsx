@@ -1,8 +1,11 @@
 "use client";
 
-import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
+
+// GPU-optimized transition
+const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 import { MapPin, Clock, Car, Shield, Users, Building, Award, CheckCircle } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 
 const stats = [
   { value: 20, suffix: "+", label: "Years Experience" },
@@ -62,14 +65,23 @@ function AnimatedCounter({ value, suffix = "", decimal = false }: { value: numbe
 
 export default function About() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
   });
 
-  const leftY = useTransform(scrollYProgress, [0, 1], ["5%", "-5%"]);
-  const rightY = useTransform(scrollYProgress, [0, 1], ["-5%", "5%"]);
-  const imageScale = useTransform(scrollYProgress, [0, 0.5], [1.1, 1]);
+  // Only use parallax on desktop
+  const leftY = useTransform(scrollYProgress, [0, 1], isMobile ? ["0%", "0%"] : ["3%", "-3%"]);
+  const rightY = useTransform(scrollYProgress, [0, 1], isMobile ? ["0%", "0%"] : ["-3%", "3%"]);
 
   return (
     <section ref={containerRef} className="relative py-32 bg-[#fafafa] overflow-hidden">
@@ -81,7 +93,7 @@ export default function About() {
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           {/* Content - Left Side */}
           <motion.div
-            style={{ y: leftY }}
+            style={{ y: leftY, willChange: isMobile ? "auto" : "transform" }}
             className="relative z-10"
           >
             <motion.div
@@ -176,7 +188,7 @@ export default function About() {
 
           {/* Stats - Right Side */}
           <motion.div
-            style={{ y: rightY }}
+            style={{ y: rightY, willChange: isMobile ? "auto" : "transform" }}
             className="relative"
           >
             {/* Main stats card */}

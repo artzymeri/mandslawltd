@@ -1,6 +1,9 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
+
+// GPU-optimized transition
+const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 import { useState, useRef } from "react";
 import { ArrowRight, Phone, Mail, MapPin, Clock, Send } from "lucide-react";
 
@@ -13,13 +16,6 @@ export default function Contact() {
     message: "",
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"]
-  });
-
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "10%"]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +34,11 @@ export default function Contact() {
 
   return (
     <section ref={containerRef} id="contact" className="relative py-32 bg-[#fafafa] overflow-hidden">
-      {/* Background decorations */}
-      <motion.div 
-        className="absolute inset-0 pointer-events-none"
-        style={{ y: backgroundY }}
-      >
+      {/* Background decorations - static for performance */}
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full blur-[120px] translate-x-1/3 translate-y-1/3" />
-      </motion.div>
+      </div>
 
       {/* Grid pattern */}
       <div 
@@ -193,19 +186,6 @@ export default function Contact() {
                 >
                   <span className="relative z-10">Send Message</span>
                   <Send size={20} className="relative z-10 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                  {/* Shimmer effect */}
-                  <motion.div
-                    className="absolute inset-0"
-                    style={{
-                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
-                    }}
-                    animate={{ x: ["-100%", "100%"] }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
                 </motion.button>
               </form>
             </div>

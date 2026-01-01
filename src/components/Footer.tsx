@@ -1,6 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+
+// GPU-optimized transition
+const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Phone, Mail, MapPin } from "lucide-react";
@@ -35,11 +38,12 @@ export default function Footer() {
       <div className="relative border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, ...gpuTransition }}
             className="flex flex-col lg:flex-row items-center justify-between gap-10"
+            style={{ willChange: "transform, opacity" }}
           >
             <div>
               <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium font-serif text-white mb-4">

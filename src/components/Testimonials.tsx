@@ -1,6 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+
+// GPU-optimized transition
+const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 import { Star, Quote, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -44,21 +47,19 @@ export default function Testimonials() {
     setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+  // Simplified GPU-friendly variants (opacity + transform only)
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.95,
+      x: direction > 0 ? 50 : -50,
     }),
     center: {
-      x: 0,
       opacity: 1,
-      scale: 1,
+      x: 0,
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? 100 : -100,
       opacity: 0,
-      scale: 0.95,
+      x: direction < 0 ? 50 : -50,
     }),
   };
 
@@ -143,20 +144,14 @@ export default function Testimonials() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.4, ...gpuTransition }}
                 className="relative z-10 text-center"
+                style={{ willChange: "transform, opacity" }}
               >
-                {/* Stars */}
+                {/* Stars - static for performance */}
                 <div className="flex justify-center gap-1 mb-8">
                   {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.1 }}
-                    >
-                      <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
-                    </motion.div>
+                    <Star key={i} className="w-5 h-5 fill-amber-500 text-amber-500" />
                   ))}
                 </div>
 

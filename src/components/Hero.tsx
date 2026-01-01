@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { ArrowRight, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
@@ -10,7 +10,15 @@ export default function Hero() {
   const video2Ref = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeVideo, setActiveVideo] = useState<1 | 2>(1);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile device
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Parallax scroll
   const { scrollYProgress } = useScroll({
@@ -28,18 +36,6 @@ export default function Hero() {
   const opacity = useTransform(smoothProgress, [0, 0.5], [1, 0]);
   const scale = useTransform(smoothProgress, [0, 0.5], [1, 1.1]);
   const textY = useTransform(smoothProgress, [0, 1], ["0%", "100%"]);
-
-  // Mouse parallax for content
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth - 0.5) * 20,
-        y: (e.clientY / window.innerHeight - 0.5) * 20,
-      });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
 
   const handleVideo1End = () => {
     setActiveVideo(2);
@@ -96,8 +92,8 @@ export default function Hero() {
     >
       {/* Video Background with Parallax */}
       <motion.div 
-        className="absolute inset-0 z-0"
-        style={{ y, scale }}
+        className="absolute inset-0 z-0 will-change-transform"
+        style={{ y: isMobile ? 0 : y, scale: isMobile ? 1 : scale }}
       >
         <video
           ref={video1Ref}
@@ -125,39 +121,12 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
       </motion.div>
 
-      {/* Floating decorative elements */}
-      <motion.div
-        className="absolute top-20 left-10 w-32 h-32 border border-white/10 rounded-full"
-        animate={{
-          rotate: 360,
-          scale: [1, 1.1, 1],
-        }}
-        transition={{
-          rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-          scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-        }}
-        style={{ opacity }}
-      />
-      <motion.div
-        className="absolute bottom-40 right-20 w-20 h-20 border border-amber-500/20"
-        animate={{
-          rotate: -360,
-        }}
-        transition={{
-          duration: 15,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        style={{ opacity }}
-      />
-
       {/* Content - Centered, Premium */}
       <motion.div 
-        className="relative z-10 text-center px-6 max-w-5xl mx-auto"
+        className="relative z-10 text-center px-6 max-w-5xl mx-auto will-change-transform"
         style={{ 
-          y: textY,
+          y: isMobile ? 0 : textY,
           opacity,
-          x: mousePosition.x * 0.5,
         }}
       >
         {/* Decorative line */}

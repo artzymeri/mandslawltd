@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+// GPU-optimized transition config
+const gpuTransition = {
+  type: "tween" as const,
+  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+};
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, ArrowUpRight } from "lucide-react";
@@ -22,10 +28,6 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
 
-  const { scrollYProgress } = useScroll();
-  const navOpacity = useTransform(scrollYProgress, [0, 0.1], [0.9, 1]);
-  const navBlur = useTransform(scrollYProgress, [0, 0.1], [10, 20]);
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -38,9 +40,10 @@ export default function Navbar() {
     <>
       {/* Main Navbar */}
       <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0, y: -100 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ...gpuTransition }}
+        style={{ willChange: "transform, opacity" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
           isScrolled
             ? "py-2"
@@ -153,11 +156,12 @@ export default function Navbar() {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, clipPath: "circle(0% at calc(100% - 40px) 40px)" }}
-              animate={{ opacity: 1, clipPath: "circle(150% at calc(100% - 40px) 40px)" }}
-              exit={{ opacity: 0, clipPath: "circle(0% at calc(100% - 40px) 40px)" }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
               className="lg:hidden fixed inset-0 bg-[#0a0a0a] z-40"
+              style={{ willChange: "opacity" }}
             >
               <div className="flex flex-col justify-center items-center h-full px-8">
                 {navLinks.map((link, index) => (
