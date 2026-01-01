@@ -7,3 +7,7 @@ export { default as Testimonials } from './Testimonials';
 export { default as Contact } from './Contact';
 export { default as Footer } from './Footer';
 export { default as Background3D } from './Background3D';
+export { default as SmoothScroll } from './SmoothScroll';
+export { default as CustomCursor } from './CustomCursor';
+export { default as FloatingNav } from './FloatingNav';
+export { default as MagneticButton } from './MagneticButton';

@@ -173,10 +173,10 @@ export default function Testimonials() {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div className="flex items-center justify-center gap-4 mt-12">
+            <div className="relative z-30 flex items-center justify-center gap-4 mt-12">
               <button
                 onClick={prev}
-                className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 hover:border-amber-500/30 transition-all group"
+                className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 hover:border-amber-500/30 transition-all group cursor-pointer"
               >
                 <ChevronLeft className="w-5 h-5 text-[#1a1a1a]/50 group-hover:text-amber-600 transition-colors" />
               </button>
@@ -190,7 +190,7 @@ export default function Testimonials() {
                       setDirection(index > activeIndex ? 1 : -1);
                       setActiveIndex(index);
                     }}
-                    className={`h-2 rounded-full transition-all duration-300 ${
+                    className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                       index === activeIndex 
                         ? "w-8 bg-gradient-to-r from-amber-500 to-amber-600" 
                         : "w-2 bg-black/10 hover:bg-black/20"
@@ -201,7 +201,7 @@ export default function Testimonials() {
 
               <button
                 onClick={next}
-                className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 hover:border-amber-500/30 transition-all group"
+                className="w-12 h-12 rounded-full border border-black/10 flex items-center justify-center hover:bg-black/5 hover:border-amber-500/30 transition-all group cursor-pointer"
               >
                 <ChevronRight className="w-5 h-5 text-[#1a1a1a]/50 group-hover:text-amber-600 transition-colors" />
               </button>

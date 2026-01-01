@@ -27,6 +27,16 @@ h1, h2, h3, h4, h5, h6,
   font-family: var(--font-cormorant);
 }
 
+/* Playfair Display for special headings */
+.font-playfair {
+  font-family: var(--font-playfair);
+}
+
+/* Perspective for 3D text animations */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
 /* Selection */
 ::selection {
   background: rgba(194, 159, 97, 0.3);

@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import Image from "next/image";
 
 interface LoaderProps {
   onComplete: () => void;
@@ -104,20 +103,22 @@ export default function Loader({ onComplete }: LoaderProps) {
 
           {/* Central content */}
           <div className="relative z-10 flex flex-col items-center">
-            {/* Logo */}
+            {/* Logo - suppressHydrationWarning to handle browser extension interference */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={showLogo ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 1, ease: "easeOut" }}
               className="mb-10"
+              suppressHydrationWarning
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/logo.png"
                 alt="M&S Law Ltd"
                 width={180}
                 height={72}
                 className="h-16 w-auto"
-                priority
+                suppressHydrationWarning
               />
             </motion.div>
 
