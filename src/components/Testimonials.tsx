@@ -126,7 +126,7 @@ export default function Testimonials() {
           </motion.div>
 
           {/* Testimonial card */}
-          <div className="relative bg-gradient-to-br from-[#fafafa] to-white rounded-[32px] p-10 md:p-16 pt-20 border border-black/5 shadow-[0_20px_80px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="relative z-20 bg-gradient-to-br from-[#fafafa] to-white rounded-[32px] p-10 md:p-16 pt-20 border border-black/5 shadow-[0_20px_80px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* Background pattern */}
             <div 
               className="absolute inset-0 opacity-[0.02]"

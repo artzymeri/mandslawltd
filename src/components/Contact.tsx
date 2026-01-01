@@ -1,14 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-
-// GPU-optimized transition
-const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
-import { useState, useRef } from "react";
-import { ArrowRight, Phone, Mail, MapPin, Clock, Send } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Phone, Mail, MapPin, Clock, Send } from "lucide-react";
 
 export default function Contact() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,262 +16,272 @@ export default function Contact() {
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+
+  // Animated flowing background
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    let time = 0;
+    let animationId: number;
+    const targetFPS = isMobile ? 30 : 60;
+    const frameInterval = 1000 / targetFPS;
+    let lastFrameTime = 0;
+
+    const animate = (currentTime: number) => {
+      animationId = requestAnimationFrame(animate);
+      
+      if (currentTime - lastFrameTime < frameInterval) return;
+      lastFrameTime = currentTime;
+
+      time += 0.003;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Soft flowing waves - light amber tones
+      for (let wave = 0; wave < 3; wave++) {
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        
+        const baseY = canvas.height * (0.3 + wave * 0.2);
+        const amplitude = 60 - wave * 15;
+        const frequency = 0.002 + wave * 0.001;
+        const speed = time * (1 + wave * 0.3);
+        
+        for (let x = 0; x <= canvas.width; x += isMobile ? 8 : 4) {
+          const y = baseY + 
+            Math.sin(x * frequency + speed) * amplitude +
+            Math.sin(x * frequency * 0.5 + speed * 1.3) * (amplitude * 0.4);
+          ctx.lineTo(x, y);
+        }
+        
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.closePath();
+        
+        const gradient = ctx.createLinearGradient(0, baseY - amplitude, 0, canvas.height);
+        gradient.addColorStop(0, `rgba(194, 159, 97, ${0.04 - wave * 0.01})`);
+        gradient.addColorStop(1, "rgba(194, 159, 97, 0)");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+
+      // Floating orbs
+      if (!isMobile) {
+        for (let i = 0; i < 8; i++) {
+          const x = (Math.sin(time * 0.5 + i * 1.2) * 0.3 + 0.5) * canvas.width;
+          const y = (Math.cos(time * 0.4 + i * 0.9) * 0.3 + 0.4) * canvas.height;
+          const size = 80 + Math.sin(time + i) * 20;
+          
+          const orbGradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+          orbGradient.addColorStop(0, "rgba(194, 159, 97, 0.06)");
+          orbGradient.addColorStop(1, "rgba(194, 159, 97, 0)");
+          
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fillStyle = orbGradient;
+          ctx.fill();
+        }
+      }
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener("resize", resize);
+    };
+  }, [isMobile]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log(formData);
   };
 
   const inputClasses = (field: string) => `
-    w-full px-6 py-5 bg-white rounded-2xl border-2 transition-all duration-300 text-lg
+    w-full px-5 py-4 bg-white/80 backdrop-blur-sm rounded-xl border transition-all duration-300 text-base
     ${focusedField === field || formData[field as keyof typeof formData]
-      ? "border-amber-500/50 shadow-[0_0_30px_rgba(194,159,97,0.15)]"
-      : "border-black/5 hover:border-black/10"
+      ? "border-amber-500/40 shadow-[0_0_20px_rgba(194,159,97,0.1)]"
+      : "border-[#1a1a1a]/10 hover:border-[#1a1a1a]/20"
     }
-    focus:outline-none focus:border-amber-500/50 focus:shadow-[0_0_30px_rgba(194,159,97,0.15)]
+    focus:outline-none focus:border-amber-500/40 focus:shadow-[0_0_20px_rgba(194,159,97,0.1)]
     placeholder:text-[#1a1a1a]/30
   `;
 
   return (
-    <section ref={containerRef} id="contact" className="relative py-32 bg-[#fafafa] overflow-hidden">
-      {/* Background decorations - static for performance */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full blur-[120px] translate-x-1/3 translate-y-1/3" />
-      </div>
+    <section ref={containerRef} id="contact" className="relative py-24 bg-gradient-to-b from-[#faf9f7] to-[#f5f3f0] overflow-hidden">
+      {/* Animated canvas background */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      />
 
-      {/* Grid pattern */}
+      {/* Subtle grid pattern */}
       <div 
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.015]"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, #1a1a1a 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
+          backgroundImage: `linear-gradient(#1a1a1a 1px, transparent 1px), linear-gradient(90deg, #1a1a1a 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
         }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-20">
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="w-16 h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent mx-auto mb-8"
-          />
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="text-amber-600/70 text-sm tracking-[0.3em] uppercase mb-4"
-          >
+      <div className="relative max-w-6xl mx-auto px-6">
+        {/* Compact Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-14"
+        >
+          <p className="text-amber-600/60 text-xs tracking-[0.3em] uppercase mb-3">
             Contact
-          </motion.p>
-          <motion.h2
+          </p>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium text-[#1a1a1a] tracking-tight font-serif">
+            Get in touch
+          </h2>
+        </motion.div>
+
+        {/* Main Grid - More compact */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Contact Form */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-4xl md:text-5xl lg:text-6xl font-medium text-[#1a1a1a] tracking-tight font-serif"
+            transition={{ duration: 0.5 }}
+            className="lg:col-span-2"
           >
-            Get in touch
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-[#1a1a1a]/50 text-lg max-w-xl mx-auto mt-6"
-          >
-            Ready to discuss your legal needs? We're here to help. Contact us for a free consultation.
-          </motion.p>
-        </div>
-
-        <div className="grid lg:grid-cols-5 gap-12 lg:gap-16">
-          {/* Contact Form - Takes more space */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-3"
-          >
-            <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-[0_20px_80px_rgba(0,0,0,0.06)] border border-black/5">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                  >
-                    <input
-                      type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      onFocus={() => setFocusedField("name")}
-                      onBlur={() => setFocusedField(null)}
-                      className={inputClasses("name")}
-                      placeholder="Your name"
-                      required
-                    />
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.15 }}
-                  >
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      onFocus={() => setFocusedField("email")}
-                      onBlur={() => setFocusedField(null)}
-                      className={inputClasses("email")}
-                      placeholder="Email address"
-                      required
-                    />
-                  </motion.div>
-                </div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-white/80">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
                   <input
-                    type="tel"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    onFocus={() => setFocusedField("phone")}
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onFocus={() => setFocusedField("name")}
                     onBlur={() => setFocusedField(null)}
-                    className={inputClasses("phone")}
-                    placeholder="Phone number"
-                  />
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.25 }}
-                >
-                  <textarea
-                    id="message"
-                    rows={5}
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    onFocus={() => setFocusedField("message")}
-                    onBlur={() => setFocusedField(null)}
-                    className={`${inputClasses("message")} resize-none`}
-                    placeholder="How can we help you?"
+                    className={inputClasses("name")}
+                    placeholder="Your name"
                     required
                   />
-                </motion.div>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    className={inputClasses("email")}
+                    placeholder="Email address"
+                    required
+                  />
+                </div>
 
-                <motion.button
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onFocus={() => setFocusedField("phone")}
+                  onBlur={() => setFocusedField(null)}
+                  className={inputClasses("phone")}
+                  placeholder="Phone number"
+                />
+
+                <textarea
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  onFocus={() => setFocusedField("message")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`${inputClasses("message")} resize-none`}
+                  placeholder="How can we help you?"
+                  required
+                />
+
+                <button
                   type="submit"
-                  className="group w-full relative inline-flex items-center justify-center gap-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-10 py-5 rounded-2xl font-medium text-lg transition-all hover:shadow-[0_20px_50px_rgba(194,159,97,0.3)] overflow-hidden"
+                  className="group w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-8 py-4 rounded-xl font-medium transition-all hover:shadow-[0_15px_40px_rgba(194,159,97,0.25)] hover:scale-[1.01]"
                 >
-                  <span className="relative z-10">Send Message</span>
-                  <Send size={20} className="relative z-10 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </motion.button>
+                  <span>Send Message</span>
+                  <Send size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </button>
               </form>
             </div>
           </motion.div>
 
-          {/* Contact Info - Takes less space */}
+          {/* Contact Info - Compact sidebar */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="lg:col-span-2 space-y-6"
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="space-y-4"
           >
-            {/* Phone card */}
-            <motion.a
+            {/* Phone */}
+            <a
               href="tel:01254404055"
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="group block bg-[#0a0a0a] rounded-3xl p-8 text-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-all"
+              className="group block bg-[#1a1a1a] rounded-xl p-5 text-white hover:shadow-lg transition-all"
             >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-amber-500" />
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <Phone className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-white/50 text-sm uppercase tracking-wide">Call us</p>
+                <p className="text-white/50 text-xs uppercase tracking-wide">Call us</p>
               </div>
-              <p className="text-3xl md:text-4xl font-medium font-serif group-hover:text-amber-400 transition-colors">
+              <p className="text-xl md:text-2xl font-medium font-serif group-hover:text-amber-400 transition-colors">
                 01254 40 40 55
               </p>
-            </motion.a>
+            </a>
 
-            {/* Email card */}
-            <motion.a
+            {/* Email */}
+            <a
               href="mailto:info@mandslawltd.co.uk"
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="group block bg-white rounded-3xl p-8 border border-black/5 hover:shadow-lg transition-all"
+              className="group block bg-white/70 backdrop-blur-sm rounded-xl p-5 border border-[#1a1a1a]/5 hover:shadow-md transition-all"
             >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-amber-600" />
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-amber-600" />
                 </div>
-                <p className="text-[#1a1a1a]/50 text-sm uppercase tracking-wide">Email</p>
+                <p className="text-[#1a1a1a]/50 text-xs uppercase tracking-wide">Email</p>
               </div>
-              <p className="text-xl text-[#1a1a1a] group-hover:text-amber-600 transition-colors">
+              <p className="text-base text-[#1a1a1a] group-hover:text-amber-600 transition-colors truncate">
                 info@mandslawltd.co.uk
               </p>
-            </motion.a>
+            </a>
 
-            {/* Address card */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white rounded-3xl p-8 border border-black/5"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-amber-600" />
+            {/* Address */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-5 border border-[#1a1a1a]/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-amber-600" />
                 </div>
-                <p className="text-[#1a1a1a]/50 text-sm uppercase tracking-wide">Visit us</p>
+                <p className="text-[#1a1a1a]/50 text-xs uppercase tracking-wide">Visit us</p>
               </div>
-              <p className="text-lg text-[#1a1a1a] leading-relaxed">
+              <p className="text-sm text-[#1a1a1a]/80 leading-relaxed">
                 Suite 201, Cardwell House,<br />
                 Cardwell Place, Blackburn,<br />
                 Lancashire, BB2 1LG
               </p>
-            </motion.div>
+            </div>
 
-            {/* Hours */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-3 px-2 pt-4"
-            >
-              <Clock className="w-5 h-5 text-amber-600/50" />
-              <p className="text-[#1a1a1a]/50 text-sm">
-                Easy motorway access with ample parking available.
+            {/* Hours note */}
+            <div className="flex items-center gap-2 px-1 pt-2">
+              <Clock className="w-4 h-4 text-amber-600/40" />
+              <p className="text-[#1a1a1a]/40 text-xs">
+                Easy motorway access & parking
               </p>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </div>

@@ -257,7 +257,7 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="absolute -left-8 bottom-20 bg-white rounded-2xl p-6 shadow-xl max-w-xs border border-black/5 hidden lg:block"
+              className="absolute -right-8 bottom-20 bg-white/80 rounded-2xl p-6 shadow-xl max-w-xs border border-black/5 hidden lg:block"
             >
               <div className="flex gap-1 mb-3">
                 {[...Array(5)].map((_, i) => (

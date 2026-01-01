@@ -1,9 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-
-// GPU-optimized transition
-const gpuTransition = { type: "tween" as const, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Phone, Mail, MapPin } from "lucide-react";
@@ -33,45 +30,6 @@ export default function Footer() {
           backgroundSize: '40px 40px',
         }}
       />
-
-      {/* CTA Section */}
-      <div className="relative border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ...gpuTransition }}
-            className="flex flex-col lg:flex-row items-center justify-between gap-10"
-            style={{ willChange: "transform, opacity" }}
-          >
-            <div>
-              <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium font-serif text-white mb-4">
-                Ready to get started?
-              </h3>
-              <p className="text-white/40 text-lg max-w-xl">
-                Contact us today for a free consultation and discover how we can help protect your interests.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <a
-                href="tel:01254404055"
-                className="group inline-flex items-center gap-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-8 py-4 rounded-full font-medium transition-all hover:shadow-[0_20px_50px_rgba(194,159,97,0.3)]"
-              >
-                <Phone size={18} />
-                Call Now
-              </a>
-              <Link
-                href="/contact"
-                className="group inline-flex items-center gap-3 border border-white/20 text-white px-8 py-4 rounded-full font-medium transition-all hover:bg-white/5 hover:border-white/40"
-              >
-                Send Message
-                <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* Main Footer */}
       <div className="relative max-w-7xl mx-auto px-6 py-16">
