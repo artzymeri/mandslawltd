@@ -2,8 +2,29 @@
 
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import MagneticButton from "./MagneticButton";
+
+// GPU Performance Detection
+const detectPerformanceTier = (): 'high' | 'medium' | 'low' => {
+  if (typeof window === 'undefined') return 'medium';
+  
+  const nav = navigator as Navigator & { 
+    deviceMemory?: number; 
+    hardwareConcurrency?: number;
+  };
+  
+  // Check for reduced motion preference
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'low';
+  
+  const memory = nav.deviceMemory || 4;
+  const cores = nav.hardwareConcurrency || 4;
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (memory < 2 || cores < 2) return 'low';
+  if (memory < 4 || cores < 4 || isMobileDevice) return 'medium';
+  return 'high';
+};
 
 export default function Hero() {
   const video1Ref = useRef<HTMLVideoElement>(null);
@@ -12,48 +33,66 @@ export default function Hero() {
   const [activeVideo, setActiveVideo] = useState<1 | 2>(1);
   const [isMobile, setIsMobile] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [perfTier, setPerfTier] = useState<'high' | 'medium' | 'low'>('medium');
 
   // Check for mobile device
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener("resize", checkMobile);
+    window.addEventListener("resize", checkMobile, { passive: true });
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Mouse tracking for subtle parallax
+  // Detect performance tier
   useEffect(() => {
-    if (isMobile) return;
+    setPerfTier(detectPerformanceTier());
+  }, []);
+
+  // Mouse tracking for subtle parallax - disabled on low-perf devices
+  useEffect(() => {
+    if (isMobile || perfTier === 'low') return;
     
+    let rafId: number;
     const handleMouseMove = (e: MouseEvent) => {
-      const { clientX, clientY } = e;
-      const { innerWidth, innerHeight } = window;
-      setMousePosition({
-        x: (clientX / innerWidth - 0.5) * 20,
-        y: (clientY / innerHeight - 0.5) * 20,
+      // Use RAF for smoother updates
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const { clientX, clientY } = e;
+        const { innerWidth, innerHeight } = window;
+        setMousePosition({
+          x: (clientX / innerWidth - 0.5) * (perfTier === 'high' ? 20 : 10),
+          y: (clientY / innerHeight - 0.5) * (perfTier === 'high' ? 20 : 10),
+        });
       });
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [isMobile]);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(rafId);
+    };
+  }, [isMobile, perfTier]);
 
-  // Parallax scroll
+  // Parallax scroll with performance-based settings
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end start"]
   });
 
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  // Adjust spring settings based on performance tier
+  const springConfig = useMemo(() => ({
+    stiffness: perfTier === 'low' ? 50 : 100,
+    damping: perfTier === 'low' ? 50 : 30,
+    restDelta: perfTier === 'low' ? 0.01 : 0.001
+  }), [perfTier]);
 
-  const y = useTransform(smoothProgress, [0, 1], ["0%", "40%"]);
+  const smoothProgress = useSpring(scrollYProgress, springConfig);
+
+  // Simplified transforms for low-perf devices
+  const y = useTransform(smoothProgress, [0, 1], ["0%", perfTier === 'low' ? "20%" : "40%"]);
   const opacity = useTransform(smoothProgress, [0, 0.5], [1, 0]);
-  const scale = useTransform(smoothProgress, [0, 0.5], [1, 1.15]);
-  const textY = useTransform(smoothProgress, [0, 1], ["0%", "80%"]);
+  const scale = useTransform(smoothProgress, [0, 0.5], [1, perfTier === 'low' ? 1.05 : 1.15]);
+  const textY = useTransform(smoothProgress, [0, 1], ["0%", perfTier === 'low' ? "40%" : "80%"]);
 
   const handleVideo1End = () => {
     setActiveVideo(2);
@@ -65,7 +104,7 @@ export default function Hero() {
     video1Ref.current?.play();
   };
 
-  // Staggered character reveal animation
+  // Staggered character reveal animation - simplified for low-perf devices
   const headlineText = "Legal excellence";
   const subText = "simplified.";
 
@@ -74,8 +113,8 @@ export default function Hero() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.03,
-        delayChildren: 0.5,
+        staggerChildren: perfTier === 'low' ? 0 : 0.03,
+        delayChildren: perfTier === 'low' ? 0.2 : 0.5,
       },
     },
   };
@@ -83,22 +122,37 @@ export default function Hero() {
   const letterVariants = {
     hidden: { 
       opacity: 0, 
-      y: 100,
-      rotateX: -90,
+      y: perfTier === 'low' ? 20 : 100,
+      rotateX: perfTier === 'low' ? 0 : -90,
     },
     visible: {
       opacity: 1,
       y: 0,
       rotateX: 0,
       transition: {
-        type: "spring" as const,
+        type: perfTier === 'low' ? "tween" as const : "spring" as const,
         damping: 12,
         stiffness: 100,
+        duration: perfTier === 'low' ? 0.4 : undefined,
       },
     },
   };
 
   const renderAnimatedText = (text: string, className: string) => {
+    // For low-perf devices, render text as a single block instead of per-character
+    if (perfTier === 'low') {
+      return (
+        <motion.span
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className={`inline-block ${className}`}
+        >
+          {text}
+        </motion.span>
+      );
+    }
+    
     return (
       <motion.span
         variants={containerVariants}
@@ -114,7 +168,8 @@ export default function Hero() {
             className="inline-block"
             style={{ 
               transformOrigin: "bottom center",
-              transformStyle: "preserve-3d",
+              transformStyle: perfTier === 'high' ? "preserve-3d" : "flat",
+              willChange: 'transform, opacity',
             }}
           >
             {char === " " ? "\u00A0" : char}
@@ -129,13 +184,15 @@ export default function Hero() {
       ref={containerRef}
       className="relative h-screen flex items-center justify-center overflow-hidden bg-black"
     >
-      {/* Video Background with Parallax */}
+      {/* Video Background with Parallax - GPU optimized */}
       <motion.div 
-        className="absolute inset-0 z-0 will-change-transform"
+        className="absolute inset-0 z-0"
         style={{ 
-          y: isMobile ? 0 : y, 
-          scale: isMobile ? 1 : scale,
-          x: isMobile ? 0 : mousePosition.x * 0.5,
+          y: isMobile || perfTier === 'low' ? 0 : y, 
+          scale: isMobile || perfTier === 'low' ? 1 : scale,
+          x: isMobile || perfTier === 'low' ? 0 : mousePosition.x * 0.5,
+          willChange: perfTier === 'high' ? 'transform' : 'auto',
+          transform: 'translateZ(0)',
         }}
       >
         <video
@@ -166,21 +223,25 @@ export default function Hero() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
       </motion.div>
 
-      {/* Animated grain overlay */}
-      <div 
-        className="absolute inset-0 z-[1] opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Animated grain overlay - disabled on low-perf devices */}
+      {perfTier !== 'low' && (
+        <div 
+          className="absolute inset-0 z-[1] opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
+      )}
 
-      {/* Content - Centered, Cinematic */}
+      {/* Content - Centered, Cinematic - GPU optimized */}
       <motion.div 
-        className="relative z-10 text-center px-6 max-w-6xl mx-auto will-change-transform"
+        className="relative z-10 text-center px-6 max-w-6xl mx-auto"
         style={{ 
-          y: isMobile ? 0 : textY,
+          y: isMobile || perfTier === 'low' ? 0 : textY,
           opacity,
-          x: isMobile ? 0 : mousePosition.x * -0.3,
+          x: isMobile || perfTier === 'low' ? 0 : mousePosition.x * -0.3,
+          willChange: perfTier === 'high' ? 'transform, opacity' : 'auto',
+          transform: 'translateZ(0)',
         }}
       >
         {/* Pre-headline badge */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface LoaderProps {
   onComplete: () => void;
@@ -9,11 +9,29 @@ interface LoaderProps {
 
 const words = ["Precision", "Integrity", "M&S Law"];
 
+// Detect low-performance devices
+const isLowPerformanceDevice = () => {
+  if (typeof window === 'undefined') return false;
+  // Check for low memory devices
+  const nav = navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number };
+  const lowMemory = nav.deviceMemory !== undefined && nav.deviceMemory < 4;
+  const lowCores = nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency < 4;
+  // Check for reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return lowMemory || lowCores || prefersReducedMotion;
+};
+
 export default function Loader({ onComplete }: LoaderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [displayProgress, setDisplayProgress] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [isLowPerf, setIsLowPerf] = useState(false);
+
+  // Check device performance on mount
+  useEffect(() => {
+    setIsLowPerf(isLowPerformanceDevice());
+  }, []);
 
   useEffect(() => {
     // Word cycling effect
@@ -87,8 +105,10 @@ export default function Loader({ onComplete }: LoaderProps) {
     };
   }, [onComplete]);
 
-  // Premium heavy easing curve
-  const curtainEasing = [0.76, 0, 0.24, 1] as [number, number, number, number];
+  // Premium heavy easing curve - simplified for low-perf devices
+  const curtainEasing = isLowPerf 
+    ? [0.4, 0, 0.2, 1] as [number, number, number, number]
+    : [0.76, 0, 0.24, 1] as [number, number, number, number];
 
   return (
     <AnimatePresence mode="wait">
@@ -97,42 +117,55 @@ export default function Loader({ onComplete }: LoaderProps) {
           initial={{ y: 0 }}
           animate={{ y: isRevealing ? "-100%" : 0 }}
           transition={{ 
-            duration: 1.2, 
+            duration: isLowPerf ? 0.6 : 1.2, 
             ease: curtainEasing,
           }}
           className="fixed inset-0 z-50 bg-[#050505] overflow-hidden"
+          style={{
+            willChange: 'transform',
+            transform: 'translateZ(0)', // Force GPU layer
+            backfaceVisibility: 'hidden',
+          }}
         >
-          {/* Subtle grain texture */}
-          <div 
-            className="absolute inset-0 opacity-[0.04] pointer-events-none"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            }}
-          />
+          {/* Subtle grain texture - disabled on low-perf devices */}
+          {!isLowPerf && (
+            <div 
+              className="absolute inset-0 opacity-[0.04] pointer-events-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              }}
+            />
+          )}
 
-          {/* Decorative corner accents */}
-          <div className="absolute top-8 left-8 w-20 h-20">
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-[#D4AF37]/30 to-transparent" />
-            <div className="absolute top-0 left-0 w-[1px] h-full bg-gradient-to-b from-[#D4AF37]/30 to-transparent" />
-          </div>
-          <div className="absolute bottom-8 right-8 w-20 h-20">
-            <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-[#D4AF37]/30 to-transparent" />
-            <div className="absolute bottom-0 right-0 w-[1px] h-full bg-gradient-to-t from-[#D4AF37]/30 to-transparent" />
-          </div>
+          {/* Decorative corner accents - hidden on low-perf devices */}
+          {!isLowPerf && (
+            <>
+              <div className="absolute top-8 left-8 w-20 h-20">
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-[#D4AF37]/30 to-transparent" />
+                <div className="absolute top-0 left-0 w-[1px] h-full bg-gradient-to-b from-[#D4AF37]/30 to-transparent" />
+              </div>
+              <div className="absolute bottom-8 right-8 w-20 h-20">
+                <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-[#D4AF37]/30 to-transparent" />
+                <div className="absolute bottom-0 right-0 w-[1px] h-full bg-gradient-to-t from-[#D4AF37]/30 to-transparent" />
+              </div>
+            </>
+          )}
 
-          {/* Center - Word Cycle */}
+          {/* Center - Word Cycle - GPU optimized */}
           <div className="absolute inset-0 flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.h1
                 key={currentWordIndex}
-                initial={{ opacity: 0, filter: "blur(10px)" }}
-                animate={{ opacity: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0, filter: "blur(10px)" }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
+                initial={{ opacity: 0, filter: isLowPerf ? "none" : "blur(10px)", scale: 0.95 }}
+                animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+                exit={{ opacity: 0, filter: isLowPerf ? "none" : "blur(10px)", scale: 1.05 }}
+                transition={{ duration: isLowPerf ? 0.3 : 0.6, ease: "easeOut" }}
                 className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight"
                 style={{ 
                   fontFamily: "var(--font-playfair), serif",
                   color: currentWordIndex === words.length - 1 ? "#D4AF37" : "white",
+                  willChange: 'transform, opacity',
+                  transform: 'translateZ(0)',
                 }}
               >
                 {words[currentWordIndex]}

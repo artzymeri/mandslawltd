@@ -1,27 +1,66 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+
+// GPU Performance Detection
+const detectGPUPerformance = (): 'high' | 'medium' | 'low' => {
+  if (typeof window === 'undefined') return 'medium';
+  
+  const nav = navigator as Navigator & { 
+    deviceMemory?: number; 
+    hardwareConcurrency?: number;
+    connection?: { effectiveType?: string };
+  };
+  
+  // Check for reduced motion preference
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'low';
+  
+  // Check device memory (Chrome only)
+  const memory = nav.deviceMemory || 4;
+  const cores = nav.hardwareConcurrency || 4;
+  
+  // Check connection type
+  const connection = nav.connection?.effectiveType;
+  const slowConnection = connection === '2g' || connection === 'slow-2g';
+  
+  // Mobile detection
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (memory < 2 || cores < 2 || slowConnection) return 'low';
+  if (memory < 4 || cores < 4 || isMobileDevice) return 'medium';
+  return 'high';
+};
 
 export default function Background3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const velvetCanvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [gpuTier, setGpuTier] = useState<'high' | 'medium' | 'low'>('medium');
 
   const { scrollYProgress } = useScroll();
   
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  // Adjust spring settings based on GPU tier
+  const springConfig = useMemo(() => ({
+    stiffness: gpuTier === 'low' ? 50 : 100,
+    damping: gpuTier === 'low' ? 50 : 30,
+    restDelta: gpuTier === 'low' ? 0.01 : 0.001
+  }), [gpuTier]);
+  
+  const smoothProgress = useSpring(scrollYProgress, springConfig);
+
+  // Detect GPU performance on mount
+  useEffect(() => {
+    setGpuTier(detectGPUPerformance());
+  }, []);
 
   // Check for mobile device
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener("resize", checkMobile);
+    window.addEventListener("resize", checkMobile, { passive: true });
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -45,37 +84,52 @@ export default function Background3D() {
   useEffect(() => {
     const canvas = velvetCanvasRef.current;
     if (!canvas) return;
+    
+    // Skip animation entirely for low-tier GPUs
+    if (gpuTier === 'low') {
+      canvas.style.display = 'none';
+      return;
+    }
 
-    const ctx = canvas.getContext("2d", { alpha: true });
+    const ctx = canvas.getContext("2d", { 
+      alpha: true,
+      desynchronized: true, // Allow async rendering for better performance
+    });
     if (!ctx) return;
 
     let animationId: number;
     let time = 0;
     let lastFrameTime = 0;
-    const targetFPS = isMobile ? 30 : 60; // Lower FPS on mobile
+    
+    // Adaptive FPS based on GPU tier
+    const targetFPS = gpuTier === 'high' ? 60 : (isMobile ? 24 : 30);
     const frameInterval = 1000 / targetFPS;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 2);
+      // Lower DPR for better performance
+      const maxDpr = gpuTier === 'high' ? 2 : 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      const heightMultiplier = isMobile ? 2 : (gpuTier === 'high' ? 5 : 3);
+      
       canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * (isMobile ? 3 : 5) * dpr;
+      canvas.height = window.innerHeight * heightMultiplier * dpr;
       canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight * (isMobile ? 3 : 5) + "px";
+      canvas.style.height = window.innerHeight * heightMultiplier + "px";
       ctx.scale(dpr, dpr);
     };
 
     resize();
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", resize, { passive: true });
 
-    // Velvet wave parameters - reduced for mobile
-    const waves = isMobile ? [
-      { amplitude: 60, frequency: 0.003, speed: 0.012, opacity: 0.035, yOffset: 0 },
-      { amplitude: 80, frequency: 0.002, speed: 0.015, opacity: 0.03, yOffset: 300 },
-    ] : [
+    // Velvet wave parameters - adjusted based on GPU tier
+    const waves = gpuTier === 'high' && !isMobile ? [
       { amplitude: 80, frequency: 0.003, speed: 0.015, opacity: 0.04, yOffset: 0 },
       { amplitude: 60, frequency: 0.004, speed: 0.012, opacity: 0.035, yOffset: 200 },
       { amplitude: 100, frequency: 0.002, speed: 0.018, opacity: 0.03, yOffset: 400 },
       { amplitude: 70, frequency: 0.0035, speed: 0.01, opacity: 0.045, yOffset: 600 },
+    ] : [
+      { amplitude: 50, frequency: 0.002, speed: 0.01, opacity: 0.03, yOffset: 0 },
+      { amplitude: 60, frequency: 0.0015, speed: 0.012, opacity: 0.025, yOffset: 250 },
     ];
 
     const drawVelvetWave = (
@@ -83,11 +137,15 @@ export default function Background3D() {
       yBase: number,
       time: number
     ) => {
-      const step = isMobile ? 6 : 3; // Larger steps on mobile for performance
+      // Larger steps for better performance
+      const step = gpuTier === 'high' && !isMobile ? 3 : 8;
+      const maxDpr = gpuTier === 'high' ? 2 : 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      
       ctx.beginPath();
 
-      const canvasHeight = canvas.height / (isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2));
-      const canvasWidth = canvas.width / (isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+      const canvasHeight = canvas.height / dpr;
+      const canvasWidth = canvas.width / dpr;
 
       for (let x = 0; x <= canvasWidth; x += step) {
         const y =
@@ -117,13 +175,15 @@ export default function Background3D() {
     };
 
     const drawVelvetFabric = () => {
-      const canvasHeight = canvas.height / (isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2));
-      const canvasWidth = canvas.width / (isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+      const maxDpr = gpuTier === 'high' ? 2 : 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      const canvasHeight = canvas.height / dpr;
+      const canvasWidth = canvas.width / dpr;
       
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-      // Fewer layers on mobile
-      const layerCount = isMobile ? 3 : 5;
+      // Fewer layers based on GPU tier
+      const layerCount = gpuTier === 'high' && !isMobile ? 5 : 2;
       
       for (let layer = 0; layer < layerCount; layer++) {
         const baseY = layer * (canvasHeight / layerCount);
@@ -133,17 +193,17 @@ export default function Background3D() {
           drawVelvetWave(
             {
               ...wave,
-              amplitude: wave.amplitude * (1 + layer * 0.05),
+              amplitude: wave.amplitude * (1 + layer * 0.03),
             },
-            baseY + index * 120,
+            baseY + index * 150,
             layerTime
           );
         });
       }
 
-      // Fewer shimmer particles on mobile
-      if (!isMobile) {
-        for (let i = 0; i < 20; i++) {
+      // Shimmer particles only for high-tier GPUs
+      if (gpuTier === 'high' && !isMobile) {
+        for (let i = 0; i < 12; i++) {
           const shimmerX = (Math.sin(time * 0.008 + i * 0.5) * 0.5 + 0.5) * canvasWidth;
           const shimmerY = (Math.cos(time * 0.006 + i * 0.7) * 0.5 + 0.5) * canvasHeight;
           const shimmerOpacity = Math.sin(time * 0.015 + i) * 0.2 + 0.2;
@@ -156,14 +216,24 @@ export default function Background3D() {
       }
     };
 
+    // Check if page is visible (don't animate when hidden)
+    let isVisible = true;
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const animate = (currentTime: number) => {
       animationId = requestAnimationFrame(animate);
+      
+      // Don't render when page is hidden
+      if (!isVisible) return;
       
       // Throttle frame rate
       if (currentTime - lastFrameTime < frameInterval) return;
       lastFrameTime = currentTime;
       
-      time += 1;
+      time += gpuTier === 'high' ? 1 : 0.5; // Slower animation for lower tiers
       drawVelvetFabric();
     };
 
@@ -172,20 +242,24 @@ export default function Background3D() {
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isMobile]);
+  }, [isMobile, gpuTier]);
 
   return (
     <div 
       ref={containerRef}
       className="fixed inset-0 pointer-events-none overflow-hidden z-0"
     >
-      {/* 3D Velvet Canvas - Full page flowing fabric */}
+      {/* 3D Velvet Canvas - Full page flowing fabric - GPU optimized */}
       <canvas
         ref={velvetCanvasRef}
-        className="fixed inset-0 w-full h-full pointer-events-none mix-blend-soft-light will-change-transform"
+        className="fixed inset-0 w-full h-full pointer-events-none mix-blend-soft-light"
         style={{
-          transform: `translate3d(0, -${scrollY * 0.2}px, 0)`,
+          transform: `translate3d(0, ${-scrollY * 0.15}px, 0)`,
+          willChange: gpuTier === 'high' ? 'transform' : 'auto',
+          backfaceVisibility: 'hidden',
+          contain: 'strict',
         }}
       />
 
@@ -201,8 +275,8 @@ export default function Background3D() {
         }}
       />
 
-      {/* Simplified grid pattern - hidden on mobile */}
-      {!isMobile && (
+      {/* Simplified grid pattern - only for high-tier GPUs */}
+      {gpuTier === 'high' && !isMobile && (
         <div 
           className="absolute inset-0 opacity-[0.02]"
           style={{
@@ -211,30 +285,36 @@ export default function Background3D() {
               linear-gradient(90deg, rgba(26, 26, 26, 0.5) 1px, transparent 1px)
             `,
             backgroundSize: '100px 100px',
+            willChange: 'auto',
           }}
         />
       )}
 
       {/* Scroll progress indicator line - GPU optimized */}
       <motion.div
-        className="fixed left-0 top-0 w-1 bg-gradient-to-b from-amber-600/50 to-amber-800/50 origin-top z-50 will-change-transform"
+        className="fixed left-0 top-0 w-1 bg-gradient-to-b from-amber-600/50 to-amber-800/50 origin-top z-50"
         style={{
           scaleY: smoothProgress,
           height: "100vh",
+          willChange: gpuTier === 'high' ? 'transform' : 'auto',
+          transform: 'translateZ(0)',
         }}
       />
 
-      {/* Ambient glow - simplified, uses CSS transform for GPU */}
-      <motion.div
-        className="absolute w-[400px] h-[400px] md:w-[600px] md:h-[600px] rounded-full blur-3xl will-change-transform"
-        style={{
-          background: "radial-gradient(circle, rgba(194, 159, 97, 0.08) 0%, transparent 70%)",
-          left: "50%",
-          top: useTransform(smoothProgress, [0, 1], ["10%", "90%"]),
-          x: "-50%",
-          y: "-50%",
-        }}
-      />
+      {/* Ambient glow - simplified for lower tiers */}
+      {gpuTier !== 'low' && (
+        <motion.div
+          className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full blur-3xl"
+          style={{
+            background: "radial-gradient(circle, rgba(194, 159, 97, 0.06) 0%, transparent 70%)",
+            left: "50%",
+            top: useTransform(smoothProgress, [0, 1], ["10%", "90%"]),
+            x: "-50%",
+            y: "-50%",
+            willChange: gpuTier === 'high' ? 'transform' : 'auto',
+          }}
+        />
+      )}
     </div>
   );
 }
