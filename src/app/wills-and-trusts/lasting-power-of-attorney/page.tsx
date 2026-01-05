@@ -42,7 +42,7 @@ function SpotlightCard({
         style={{
           opacity,
           background: `radial-gradient(400px circle at ${position.x}px ${position.y}px, rgba(212, 175, 55, 0.15), transparent 50%)`,
-        }}
+        }} 
       />
       {children}
     </div>
